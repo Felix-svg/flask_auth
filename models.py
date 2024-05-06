@@ -29,6 +29,15 @@ class User(db.Model, SerializerMixin):
         return f"<User {self.id} {self.username}>"
 
 
+class ProgrammingLanguage(db.Model, SerializerMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(70), unique=True)
+    level = db.Column(db.String(50))
+
+    def __repr__(self):
+        return f"<{self.name}, a {self.level} level programming language>"
+
+
 class TokenBlocklist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(36), nullable=False, index=True)

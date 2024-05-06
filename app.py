@@ -1,4 +1,4 @@
-from models import User, TokenBlocklist
+from models import User, TokenBlocklist, ProgrammingLanguage
 from config import app, api, db
 from flask_restful import Resource
 from flask import make_response, session, jsonify, request
@@ -53,6 +53,9 @@ class Login(Resource):
         username = request.get_json()['username']
         password = request.get_json()['password']
 
+        if not (username and password):
+            return {"error":"Missing required fields"}
+
         user = User.query.filter(User.username == username).first()
 
         if user and user.authenticate(password):
@@ -62,47 +65,91 @@ class Login(Resource):
                 'access_token': access_token
             }, 200
         else:
-            return make_response({"error":"Invalid username or password"})
+            return make_response({"error": "Invalid username or password"}, 401)
 
 
-api.add_resource(Login, "/login")
-
-
-@app.route("/logout", methods=["DELETE"])
-@jwt_required()
-def modify_token():
-    try:
-        token = get_jwt()
-        jti = token["jti"]
-        ttype = token["type"]
-        user_id = get_jwt_identity()
-        now = datetime.now(timezone.utc)
-
-        existing_token = TokenBlocklist.query.filter_by(jti=jti).first()
-
-        if existing_token:
-            return jsonify(error="Token already revoked"), 400
-
-        db.session.add(TokenBlocklist(jti=jti, type=ttype, created_at=now, user_id=user_id))
-        db.session.commit()
-        return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
-    except Exception as e:
-        db.session.rollback()
-        return jsonify(error=str(e)), 500
+# @app.route("/logout", methods=["DELETE"])
+# @jwt_required()
+# def modify_token():
+#     try:
+#         token = get_jwt()
+#         jti = token["jti"]
+#         ttype = token["type"]
+#         user_id = get_jwt_identity()
+#         now = datetime.now(timezone.utc)
+#
+#         existing_token = TokenBlocklist.query.filter_by(jti=jti).first()
+#
+#         if existing_token:
+#             return jsonify(error="Token already revoked"), 400
+#
+#         db.session.add(TokenBlocklist(jti=jti, type=ttype, created_at=now, user_id=user_id))
+#         db.session.commit()
+#         return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
+#     except Exception as e:
+#         db.session.rollback()
+#         return jsonify(error=str(e)), 500
 
 
 class Users(Resource):
-    @jwt_required()
+    #@jwt_required()
     def get(self):
         users = []
 
         for user in User.query.all():
-            users.append(user.to_dict())
+            users.append(user.to_dict(rules=["-_password_hash"]))
 
         return make_response({"users": users})
 
 
 api.add_resource(Users, "/users")
+
+class Languages(Resource):
+    def get(self):
+        languages = []
+
+        for language in ProgrammingLanguage.query.all():
+            languages.append(language.to_dict())
+
+        return make_response({"languages":languages})
+
+
+api.add_resource(Languages, "/programming_languages")
+
+
+class LanguageByID(Resource):
+    def get(self, id):
+        language = ProgrammingLanguage.query.filter(ProgrammingLanguage.id==id).first()
+
+        if language:
+            response = language.to_dict()
+            return make_response({"language":response})
+
+    def patch(self):
+        language = ProgrammingLanguage.query.filter(ProgrammingLanguage.id==id).first()
+
+        if language:
+            for attr in request.json:
+                setattr(language, attr, request.json[attr])
+            db.session.add(language)
+            db.session.commit()
+
+            return make_response({"language":language})
+        return make_response({"error":"Language not found"})
+
+
+    def delete(self, id):
+        language = ProgrammingLanguage.query.filter(ProgrammingLanguage.id==id).first()
+
+        if language:
+            db.session.delete(language)
+            db.session.commit()
+
+            return make_response({"message":"Language successfully deleted"})
+        return make_response({"error":"Language not found"})
+
+
+api.add_resource(LanguageByID, "/programming_languages/<int:id>")
 
 
 if __name__ == "__main__":

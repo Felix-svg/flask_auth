@@ -8,7 +8,7 @@ from flask_restful import Api
 from flask_jwt_extended import JWTManager
 
 app = Flask(__name__)
-CORS(app, origins="*")
+CORS(app)
 bcrypt = Bcrypt(app)
 
 app.config['JWT_SECRET_KEY'] = "dsjkdfiwsnsdddfdjdssbohjoiaavg"
