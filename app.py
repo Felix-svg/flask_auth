@@ -104,6 +104,45 @@ class Users(Resource):
 
 api.add_resource(Users, "/users")
 
+
+class UserByID(Resource):
+    def get(self, id):
+        user = User.query.filter(User.id==id).first()
+
+        if user:
+            response = user.to_dict()
+            return make_response({"message":response}, 200)
+        return make_response({"error":"User does not exist"}, 404)
+
+    @jwt_required()
+    def patch(self, id):
+        user = User.query.fiter(User.id==id).first()
+
+        if user:
+            for attr in request.json:
+                setattr(user, attr, request.json[attr])
+            db.session.add(user)
+            db.session.commit()
+
+            response = user.to_dict()
+            return make_response({"user":response}, 200)
+        return make_response({"error":"User not found"}, 404)
+
+    @jwt_required()
+    def delete(self, id):
+        user = User.query.filter(User.id==id).first()
+
+        if user:
+            db.session.delete(user)
+            db.session.commit()
+
+            return make_response({"message":"User deleted successfully"}, 200)
+        return make_response({"error":"User not found"})
+
+
+api.add_resource(UserByID, "/users/<int:id>")
+
+
 class Languages(Resource):
     def get(self):
         languages = []
@@ -124,7 +163,9 @@ class LanguageByID(Resource):
         if language:
             response = language.to_dict()
             return make_response({"language":response})
+        return make_response({"error":"Language not found"}, 404)
 
+    @jwt_required()
     def patch(self):
         language = ProgrammingLanguage.query.filter(ProgrammingLanguage.id==id).first()
 
@@ -135,9 +176,10 @@ class LanguageByID(Resource):
             db.session.commit()
 
             return make_response({"language":language})
-        return make_response({"error":"Language not found"})
+        return make_response({"error":"Language not found"}, 404)
 
 
+    @jwt_required()
     def delete(self, id):
         language = ProgrammingLanguage.query.filter(ProgrammingLanguage.id==id).first()
 
@@ -146,7 +188,7 @@ class LanguageByID(Resource):
             db.session.commit()
 
             return make_response({"message":"Language successfully deleted"})
-        return make_response({"error":"Language not found"})
+        return make_response({"error":"Language not found"}, 404)
 
 
 api.add_resource(LanguageByID, "/programming_languages/<int:id>")
